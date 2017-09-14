@@ -17,13 +17,14 @@ maxdist(real) distance(varlist numeric min=1 max=1)
  delta(real 1)
  tlimit(real 1.96)
  h(numlist >0)
- optimal
- crossfold
+ nonoptimal
+ loocv
  kfold(integer 10)
  regtype(string)
  verbose
  stub(string)
  nogenerate
+ plotrmse
  *
 ]
 ;
@@ -40,7 +41,7 @@ local y `1'
 *-------------------------------------------------------------------------------
 *--- (1) Using user-defined bandwidth
 *-------------------------------------------------------------------------------
-if length(`"`optimal'"')==0 {
+if length(`"`nonoptimal'"')!=0 {
     local l=0
     local u=`h'
     local vars
@@ -73,7 +74,7 @@ if length(`"`optimal'"')==0 {
 *-------------------------------------------------------------------------------
 *--- (2) Using optimal bandwidth based on LOOCV or k-fold CV
 *-------------------------------------------------------------------------------
-if length(`"`optimal'"')!=0 {
+if length(`"`nonoptimal'"')==0 {
     local RMSEmin = .
     local distopt = 0
     tempvar rmseVal
@@ -142,7 +143,7 @@ if length(`"`optimal'"')!=0 {
         }
         
         ****Leave-one-out Cross-Validation
-        if length(`"`crossfold'"')==0 {
+        if length(`"`loocv'"')!=0 {
             qui count
             local max = r(N)
             tempvar diff
@@ -158,7 +159,7 @@ if length(`"`optimal'"')!=0 {
             }
         }
         ****k-fold Cross-Validation
-        if length(`"`crossfold'"')!=0 {
+        if length(`"`loocv'"')==0 {
             tempvar ksplit
             qui gen `ksplit' = ceil(runiform()*`kfold')        
             tempvar diff
@@ -229,13 +230,13 @@ if length(`"`optimal'"')!=0 {
     ereturn scalar h   = `distopt'
     ereturn local  closevars `"`cvars'"'
     ereturn scalar rmseOpt = `RMSEmin'
-
     
-    #delimit ;
-    twoway line `rmseVal' `rmseNum', scheme(s1mono) ytitle("RMSE")
-    xtitle("Bandwidth (h)") lwidth(medthick) lcolor(cranberry);
-    #delimit cr
+    if length(`"`plotrmse'"')!=0 {
+        #delimit ;
+        twoway line `rmseVal' `rmseNum', scheme(s1mono) ytitle("RMSE")
+        xtitle("Bandwidth (h)") lwidth(medthick) lcolor(cranberry);
+        #delimit cr
+    }
 }
-
 
 end
