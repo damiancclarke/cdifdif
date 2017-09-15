@@ -1,4 +1,4 @@
-function [betas,ses,RMSEmin,distopt] = cdifdif(y,X,dist,maxDist,varargin)
+function [betas,ses,RMSEmin,h] = cdifdif(y,X,dist,maxDist,varargin)
 %--------------------------------------------------------------------------------
 % PURPOSE: Implements Spillover Robust Diff-in-Diff Estimates (Clarke, 2017)
 %--------------------------------------------------------------------------------
@@ -48,23 +48,32 @@ distopt   = 0;
 rmseVal   = Inf;
 nspillopt = 0;
 
+zspills = 0;
+
 RMSEcomp  = NaN(round(maxDist/delta),2);
 iter = 1;
 for i = linspace(delta,maxDist,round(maxDist/delta))
   sprintf('Iteration %d, Distance %d',iter,i)
   [Xspill,nspill,mdist] = marginalDist(y,Xprop,dist,i,tlimit);
-  %NOTE: If nspill is 0, then the RMSE actually only needs to be estimated 1 time
-  %      This has been implemented in Stata code, but not here.
 
-  if strcmpi(CVtype,'loocv')
-    RMSE = loocv(y,Xspill);
-  elseif strcmpi(CVtype,'kfoldcv')
-    regf=@(XTRAIN,ytrain,XTEST)(XTEST*regress(ytrain,XTRAIN));
-    RMSE = crossval('mse',Xspill,y,'predfun',regf,'kfold',kfolds);
+  if nspill~=0|(nspill==0&zspills==0)
+    if strcmpi(CVtype,'loocv')
+      RMSE = loocv(y,Xspill);
+    elseif strcmpi(CVtype,'kfoldcv')
+      warning('off','stats:regress:RankDefDesignMat');
+      regf=@(XTRAIN,ytrain,XTEST)(XTEST*regress(ytrain,XTRAIN));
+      RMSE = crossval('mse',Xspill,y,'predfun',regf,'kfold',kfolds);
+    else
+      error('myfuns:cdifdif:invalidOption', ...
+	    'Cross-Validation type can either be kfoldcv or loocv. Currently set as %s',...
+	    CVtype);
+    end
+    if nspill==0
+      RMSEz=RMSE;
+      zspills=1;
+    end
   else
-    error('myfuns:cdifdif:invalidOption', ...
-	  'Cross-Validation type can either be kfoldcv or loocv. Currently set as %s',...
-	  CVtype);
+    RMSE=RMSEz;
   end
   RMSEcomp(iter,1)=i;
   RMSEcomp(iter,2)=RMSE;
@@ -75,6 +84,7 @@ for i = linspace(delta,maxDist,round(maxDist/delta))
     distopt   = mdist;
     nspillopt = nspill;
     Xest      = Xspill;
+    h         = mdist/nspill;
   end
 
   iter=iter+1;
@@ -83,9 +93,9 @@ end
 %--------------------------------------------------------------------------------
 %--- (3) Estimate Optimal Model
 %--------------------------------------------------------------------------------
-betas = (Xspill'*Xspill)\(Xspill'*y);
-uhat  = Xspill*betas-y;
-ses   = diag(sqrt((uhat'*uhat)/(length(y)-length(betas))*inv(Xspill'*Xspill)));
+betas = (Xest'*Xest)\(Xest'*y);
+uhat  = Xest*betas-y;
+ses   = diag(sqrt((uhat'*uhat)/(length(y)-length(betas))*inv(Xest'*Xest)));
 
 [betas ses]
 
@@ -106,7 +116,7 @@ set(gca, ...
     'YColor'      , [.3 .3 .3], ...
     'LineWidth'   , 1         );
 str1 = sprintf('$$\\min_{ h}$$ RMSE $CV(h) =$ %3.5g',RMSEmin);
-str2 = sprintf('arg$$\\min_{ h}$$ RMSE $CV(h) =$ %3.2g',distopt);
+str2 = sprintf('arg$$\\min_{ h}$$ RMSE $CV(h) =$ %3.2g',h);
 str  =  {str1,str2}
 DataX = interp1( [0 1], xlim(), 0.1);
 DataY = interp1( [0 1], ylim(), 0.9);
