@@ -22,5 +22,6 @@ for i = 1:k
   diff(rnum==i) = yhat(rnum==i)-y(rnum==i);
 end
 
-RMSE = sqrt(sum(diff.^2));
+Ndiv = length(y)-sum(isnan(diff));
+RMSE = sqrt(sum(diff.^2)/Ndiv);
 return

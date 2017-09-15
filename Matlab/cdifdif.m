@@ -10,6 +10,7 @@ function [betas,ses,RMSEmin,h] = cdifdif(y,X,dist,maxDist,varargin)
 %          tlimit  = Minimum t-stat to consider marginal spillover to be significant
 %          CVtype  = Type of Cross-Validation (must be either 'kfoldcv' or 'loocv')
 %          kfolds  = Number of folds for k-fold Cross-Validation
+%          program = Indicates if Octave ('octave') or MATLAB ('matlab) used 
 %--------------------------------------------------------------------------------
 % OUTPUTS: Xdist   = N-by-(k+ndist) independent variables with new distance dummies
 %          ndist   = Number of distance variables
@@ -20,24 +21,30 @@ function [betas,ses,RMSEmin,h] = cdifdif(y,X,dist,maxDist,varargin)
 %--- (1) unpack arguments
 %--------------------------------------------------------------------------------  
 numvarargs = length(varargin);
-if numvarargs > 4
+if numvarargs > 5
   error('myfuns:cdifdif:TooManyInputs', ...
-	'requires at most 4 optional inputs');
+	'requires at most 5 optional inputs');
 end
 if length(y)~=length(X)
   error('myfuns:cdifdif:inconsistentMatrices', ...
 	'y and X matrices must be of the same length');
 end  
-optargs = {1 1.96 'kfoldcv' 10};
+optargs = {1 1.96 'kfoldcv' 10 'matlab'};
 optargs(1:numvarargs) = varargin;
 
-optargsA = {1 1.96 'kfoldcv' 10};
-for i = 1:4
+optargsA = {1 1.96 'kfoldcv' 10 'matlab'};
+for i = 1:5
   if isempty(optargs{i})
     optargs{i} = optargsA{i} 
   end
 end
-[delta, tlimit, CVtype, kfolds] = optargs{:};
+[delta, tlimit, CVtype, kfolds, program] = optargs{:};
+
+if strcmpi(program,'matlab')==0 & strcmpi(program,'octave')==0
+  error('myfuns:cdifdif:invalidOption', ...
+	'Program must be specified as octave or matlab. Currently set as %s',...
+		 program);
+end
 
 %--------------------------------------------------------------------------------
 %--- (2) Iterate over potential models to find optimal
@@ -60,9 +67,17 @@ for i = linspace(delta,maxDist,round(maxDist/delta))
     if strcmpi(CVtype,'loocv')
       RMSE = loocv(y,Xspill);
     elseif strcmpi(CVtype,'kfoldcv')
-      warning('off','stats:regress:RankDefDesignMat');
-      regf=@(XTRAIN,ytrain,XTEST)(XTEST*regress(ytrain,XTRAIN));
-      RMSE = crossval('mse',Xspill,y,'predfun',regf,'kfold',kfolds);
+      if strcmpi(program,'matlab')
+	warning('off','stats:regress:RankDefDesignMat');
+	regf=@(XTRAIN,ytrain,XTEST)(XTEST*regress(ytrain,XTRAIN));
+	RMSE = crossval('mse',Xspill,y,'predfun',regf,'kfold',kfolds);
+      elseif strcmpi(program,'octave')
+	RMSE = kfoldcv(y,Xspill,kfolds);
+      else
+	error('myfuns:cdifdif:invalidOption', ...
+	      'Program must be specified as octave or matlab. Currently set as %s',...
+	      program);
+      end
     else
       error('myfuns:cdifdif:invalidOption', ...
 	    'Cross-Validation type can either be kfoldcv or loocv. Currently set as %s',...
