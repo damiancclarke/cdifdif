@@ -8,8 +8,10 @@ damian.clarke@usach.cl
 
      This folder contains implementations of the Spillover-Robust Difference-in-
 Differences methodology described in Clarke (2017). These are provided for Stata
-MATLAB/Octave, and R (R version currently under construction).
+MATLAB/Octave, and R (R version currently under construction). Individual progr-
+am files and documentation is available for each language in the respective sub-
+directory. 
 
-
-Additional details are available in the paper at:
+Additional details related to theory and estimation are available in the paper
+at:
   https://sites.google.com/site/damiancclarke/research/Clarke_Spillovers.pdf
