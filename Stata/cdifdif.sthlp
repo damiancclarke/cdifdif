@@ -29,7 +29,7 @@ help for {hi:cdifdif}
 {synopt :{cmd:loocv}} Requests for leave-one-out cross-validation to be used rather than k-fold cross validation.  This is potentially slow when there are many observations in the model.{p_end}
 {synopt :{cmd:verbose}}Requests additional output.  This is suggested when specifying {cmd:loocv} as it provides more details related to the state of advance of the program.{p_end}
 {synopt :{cmd:nonoptimal}}Requests that the optimal bandwidth search process should not be used.  This is not a suggested option.  When specified, the spillover distances must be set by the user.{p_end}
-{synopt :{cmd:h(#)}}Specifies the bandwidth for use in regressions.  This is only relevant when {cmd:nonoptimal} is specified, as other {cmd:cdifdif} determines bandwidth optimally.{p_end}
+{synopt :{cmd:h(#)}}Specifies the bandwidth for use in regressions.  This is only relevant when {cmd:nonoptimal} is specified, as otherwise {cmd:cdifdif} determines bandwidth optimally.{p_end}
 {...}
 {synoptline}
 {p2colreset}
@@ -74,7 +74,11 @@ Estimating using {hi:cdifdif} simply requires that the user pass a
 baseline difference-in-difference model as yvar and xvars, where
 this model can be estimated using any of Stata's {help regress:regression}
 commands, including {help regress}, {help areg}, {help xtreg}, and
-so forth.  Along with the baseline DD model, the name of the distance
+so forth.  It is assumed that a full set of geographic baseline fixed
+effects are included in the original model (ie area dummy variables, perhaps
+absorbed using {help areg}) so
+that when adding additional Close(i,t) variables, their initial fixed-effect
+has already been included. Along with the baseline DD model, the name of the distance
 variable should be passed, along with a maximal distance to consider
 in tests of optimal spillover bandwidths when creating the matrix
 of Close(i,t) variables.  The {cmd:distance(}{it:varname}{cmd:)} variable
@@ -95,7 +99,92 @@ variables if present.
 {title:Options}
 
 {phang}
-{cmd:distance(}{it:varname}{cmd:)}
+{cmd:distance(}{it:varname}{cmd:)} Specifies the variable which measures
+distance to the nearest treatment unit for a given observation in a given
+time-period.  This variable should be equal to zero when a unit
+is treated.  In pre-treatment periods the variable can either be equal to
+zero, or set as missing.
+
+{phang}
+{cmd:maxdist(}{it:real}{cmd:)} Scalar value which describes the maximum
+possible spillover distance to test for a particular spillover bin.  
+{hi:cdifdif} tests spillover bandwidths ranging from {cmd:delta(#)},
+increasing in units of {cmd:delta(#)}, until reaching {cmd:maxdist}.
+Note that {cmd:maxdist} does not imply that spillovers cannot be estimated
+beyond the value set in {cmd:maxdist} via the iterative estimation procedure,
+but rather that optimal bandwidths will not be considered beyond {cmd:maxdist}.
+
+{phang}
+{cmd:delta(#)} Changing {cmd:delta(#)} allows for the fineness of the grid to be
+searched when testing for optimal distance bandwidth to be varied.  Indicating a
+small value of {cmd:delta(#)} suggests that subsequent bandwidths tested should be
+closely spaced, resulting in more bandwidth options considered when determining the
+RMSE optimal bandwidth.  The units for {cmd:delta(#)} should be set based on units
+of measurement in the variable specified in {cmd:distance(}{it:varname}{cmd:)},
+as {cmd:delta(#)} partitions the distance variable into blocks of this size.
+
+{phang}
+{cmd:tlimit(#)} The spillover robust DD methodology considers models up until the
+marginal distance bin is considered statistically significant. {cmd:tlimit(#)} sets
+the level of significance required for marginal distance bin to be considered
+statistically significant.  By default it is set at {cmd:tlimit(1.96)}.	
+
+{phang}
+{cmd:kfold(#)} When determining RMSE optimal models, k-fold cross-validation is
+used by default (unless {cmd:loocv} is specified). Specifying {cmd:kfold(#)} allows
+for the number of folds used when predicting y-hat to be varied.  By default this
+is set at {cmd:kfold(10)}.
+
+{phang}
+{opth stub(string)} By default {hi:cdifcdif} returns the "close to treatment"
+variables used in the optimal model starting as _close_dist1_dist2 (where dist1 and
+dist2 refer to scalar values of distance cut-offs).  Setting stub replaces _close
+with an alternative name for returned variables.
+
+{phang}
+{cmd:nogenerate} Requests for no close to treatment variables to be returned, simply
+printing out the optimal regression model
+
+{phang}
+{cmd:plotrmse} Specifying {cmd:plotrmse} results in a graph showing RMSE values for
+each spillover bandwidth tested between {cmd:delta(#)} and {cmd:maxdist(}{it:real}{cmd:)}.
+This shows the RMSE for each model, with the lowest RMSE model providing the
+otpimal bandwidth.
+
+{phang}
+{opth regtype(string)} Specifies the regression model that is estimated with yvar and
+xvars.  This should provide the basic DD model used and how it is estimated in Stata.
+This allows any type of model which is accepted as a Stata {help regress:regression},
+including {help areg}, {help regress}, and so forth.  When not specified, regress is assumed.
+
+{phang}
+{opt *} Any other options passed to the {hi:cdifdif} command are assumed to be from
+the original {help regress:regression}.  This allows for the clustering of standard
+errors, absorbing fixed effects (when areg is specified), and the use of any other
+desired options permitted in {cmd:regtype(string)}.
+
+{phang}
+{cmd:loocv} Requests for leave-one-out cross-validation to be used rather than k-fold
+cross validation in determining the RMSE optimal spillover bandwidth.  This is
+potentially slow when there are many observations in the model.
+
+{phang}
+cmd:verbose} Requests for additional output to be printed while the program progresses.
+This is suggested when specifying {cmd:loocv} as it provides more details related to
+the state of advance of the program, which may be slow when many observations are used.
+
+{phang}
+{cmd:nonoptimal} This option is generally not suggested.  It requests that the optimal
+bandwidth search process should not be used.  When specified, the spillover distances
+must be set by the user, and {hi:cdifdif} simply partitions the distance variable
+into spillover bins, and tests for local spillovers..
+
+{phang}
+{cmd:h(#)} This Specifies the bandwidth for use in regressions.  This is only relevant
+when {cmd:nonoptimal} is specified, as otherwise {cmd:cdifdif} determines bandwidth
+optimally.
+
+
 
 {marker examples}{...}
 {title: Examples}
