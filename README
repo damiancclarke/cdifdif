@@ -1,0 +1,15 @@
+#-------------------------------------------------------------------------------
+README for cdifdif routines
+2017-09-17
+
+Damian Clarke
+damian.clarke@usach.cl
+#-------------------------------------------------------------------------------
+
+     This folder contains implementations of the Spillover-Robust Difference-in-
+Differences methodology described in Clarke (2017). These are provided for Stata
+MATLAB/Octave, and R (R version currently under construction).
+
+
+Additional details are available in the paper at:
+  https://sites.google.com/site/damiancclarke/research/Clarke_Spillovers.pdf
