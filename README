@@ -15,3 +15,11 @@ directory.
 Additional details related to theory and estimation are available in the paper
 at:
   https://sites.google.com/site/damiancclarke/research/Clarke_Spillovers.pdf
+
+Full replication code including an empirical application using the prorgram code
+in Stata is available in the example directory of this repository.  In order to
+replicate the empirical example in Stata, the estdata_munic.dta.zip file should
+be unzipped, and then the resultsMunic.do file should be run, changing the loca-
+tion of the globals on lines 37 and 38 of this file.  In order to replicate the
+simulation results from the paper, the program monteCarloSpill.m from the direc-
+tory "example/MonteCarlo" should be run in Matlab or Octave.
