@@ -2,8 +2,8 @@
 % Please edit documentation in R/cdifdif.R
 \docType{package}
 \name{cdifdif-package}
-\alias{cdifdif}
 \alias{cdifdif-package}
+\alias{_PACKAGE}
 \title{cdifdif: Spillover Robust Difference-in-Differences Estimation}
 \description{
 This package implements spillover robust difference-in-differences

@@ -5,5 +5,5 @@
 #' diff-in-diff setting, and optimally determines spillover propagation.
 #' It returns estimates of both the treatment effect, as well as (if relevant)
 #' the treatment effect on those close to treated, who weren't themselves treated.
-#'
+#' @aliases cdifdif-package
 "_PACKAGE"
