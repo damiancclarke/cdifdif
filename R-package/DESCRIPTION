@@ -1,11 +1,16 @@
-Package: cdifdif
 Type: Package
-Title: What the Package Does (Title Case)
+Package: cdifdif
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Spillover Robust Difference-in-Differences Estimation
+Description: This package implements spillover robust difference-in-differences estimates as described in Clarke (2017).  It tests for local spillovers in a  diff-in-diff setting, and optimally determines spillover propagation. It returns estimates of both the treatment effect, as well as (if relevant) the treatment effect on those close to treated, who weren't themselves treated.
+URL: https://github.com/damiancclarke/cdifdif
+BugReports: https://github.com/damiancclarke/cdifdif/issues
+Authors@R: c(
+    person("Damian", "Clarke", ,"damian.c.clarke@gmail.com", c("aut", "cre")),
+    person("Joshua", "Kunst", ,"jbkunst@gmail.com", role = "aut")
+    )
+Maintainer: Joshua Kunst <jbkunst@gmail.com>
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 6.0.1
+Roxygen: list(markdown = TRUE)
