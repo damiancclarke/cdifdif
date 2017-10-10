@@ -1,5 +1,3 @@
-data <-
-
 #' Spillover Robust Diff-in-Diff Estimation
 #'
 #' Implements Spillover Robust Diff-in-Diff Estimates (Clarke, 2017)(Clarke, 2017)
@@ -10,14 +8,15 @@ data <-
 #' @param delta a step-size for bandwidth search (based on dist variable).
 #' @param tlimit a minimum t-stat to consider marginal spillover to be significant.
 #' @param CVtype a type of Cross-Validation (must be either 'kfoldcv' or 'loocv').
-#' @param kfolds a number of folds for k-fold Cross-Validation.
+#' @param k a number of folds for k-fold Cross-Validation.
+#' @param verbose Verbose
 #'
 #' @export
 cdifdif <- function(y , X, dist,
                     maxDist = quantile(dist[dist!=0], 0.75),
                     delta   = quantile(dist[dist!=0], 0.025),
                     alpha = 0.05,
-                    CVtype, kfolds,
+                    k = 10,
                     verbose = TRUE) {
 
   ff <- log(Volume) ~ log(Height) + log(Girth)
@@ -33,34 +32,51 @@ cdifdif <- function(y , X, dist,
   # mods <- purrr::map(steps, marginal_dist, data = data, dist = dist, alpha = alpha, verbose = verbose)
   mods <- lapply(steps, marginal_dist, data = data, dist = dist, alpha = alpha, verbose = verbose)
 
-  cvs <- mods %>%
+
+  k <- 1000
+  cvs1 <- mods %>%
     lapply(function(x) x[["mod"]]) %>%
-    lapply(cvTools::repCV, K = 1000)
+    lapply(cvTools::repCV, K = k)
 
-  cvs[[1]]
-  lapply(cvs, function(x){ x[["cv"]]}) %>%
+  cvs2 <- mods %>%
+    lapply(function(x) x[["mod"]]) %>%
+    lapply(get_cv_rmse_from_mod_k, k = k)
+
+
+  microbenchmark::microbenchmark(
+    cvs1 <- mods %>%
+      lapply(function(x) x[["mod"]]) %>%
+      lapply(cvTools::repCV, K = k)
+    ,
+    cvs2 <- mods %>%
+      lapply(function(x) x[["mod"]]) %>%
+      lapply(get_cv_rmse_from_mod_k, k = k)
+    , times = 5
+  )
+
+
+  cvs1v <- lapply(cvs1, function(x){ x[["cv"]]}) %>%
     unlist() %>%
-    plot(type = "l", ylim = c(0, max(.)*1.1))
+    as.vector()
+  cvs2v <- unlist(cvs2)
 
-  cvs <- mods %>%
-    purrr::map(1) %>%
-    purrr::map(cvTools::repCV, K = 1000)
-
+  cvs1v
+  cvs2v
 
 
 }
 
-data("spilloverDGP")
-spilloverDGP
-data <- spilloverDGP %>% select(y = y2, time, treat)
-step <- 5
-step <- 52.375
-dist <- spilloverDGP$dist
+# data("spilloverDGP")
+# spilloverDGP
+# data <- spilloverDGP %>% select(y = y2, time, treat)
+# step <- 5
+# step <- 52.375
+# dist <- spilloverDGP$dist
 
 library(dplyr)
 library(purrr)
 library(broom)
-library(lmvar)
+# library(lmvar)
 
 marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
 
@@ -75,7 +91,7 @@ marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
 
   while(pval < alpha) {
 
-    if(verbose) message("step: ", step, " iteration: ", t)
+    if(verbose) message("iteration: ", t, " step: ", step)
 
     dnew <- as.numeric(dl < dist & dist <= dl + step)
     daux <- dplyr::bind_cols(daux, purrr::set_names(data_frame(dnew), paste0("d", t)))
@@ -100,23 +116,29 @@ marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
 
 }
 
-library(boot)
+get_cv_rmse_from_mod_k <- function(mod, k) {
 
-k_fold_rsq <- function(lmfit, ngroup=10) {
-  # assumes library(bootstrap)
-  # adapted from http://www.statmethods.net/stats/regression.html
-  mydata <- lmfit$model
-  outcome <- names(lmfit$model)[1]
-  predictors <- names(lmfit$model)[-1]
+  d <- mod$model
 
-  theta.fit <- function(x,y){lsfit(x,y)}
-  theta.predict <- function(fit,x){cbind(1,x)%*%fit$coef}
-  X <- as.matrix(mydata[predictors])
-  y <- as.matrix(mydata[outcome])
+  folds <- createFolds(seq_len(nrow(mod$model)), k = k)
 
-  results <- crossval(X,y,theta.fit,theta.predict,ngroup=ngroup)
-  raw_rsq <- cor(y, lmfit$fitted.values)**2 # raw R2
-  cv_rsq <- cor(y,results$cv.fit)**2 # cross-validated R2
+  ss_errs <- lapply(folds, function(f) {
 
-  c(raw_rsq=raw_rsq, cv_rsq=cv_rsq)
+    # print(f)
+
+    mod <- lm(y ~ ., data = d[-f,])
+    yht <- predict(mod, newdata = d[f, ])
+
+    err <- d[f, "y"] - yht
+
+    ss_err <-  sum(err^2)
+
+    ss_err
+
+  })
+
+  rmse <- sqrt( sum(unlist(ss_errs)) / nrow(d) )
+
+  rmse
+
 }
