@@ -13,10 +13,10 @@
 #'
 #' @export
 cdifdif <- function(y , X, dist,
-                    maxDist = quantile(dist[dist!=0], 0.75),
-                    delta   = quantile(dist[dist!=0], 0.025),
+                    maxDist = 30, #quantile(dist[dist!=0], 0.75),
+                    delta   = 1,  #quantile(dist[dist!=0], 0.025),
                     alpha = 0.05,
-                    k = 10,
+                    k = 5,
                     verbose = TRUE) {
 
   ff <- log(Volume) ~ log(Height) + log(Girth)
@@ -32,8 +32,6 @@ cdifdif <- function(y , X, dist,
   # mods <- purrr::map(steps, marginal_dist, data = data, dist = dist, alpha = alpha, verbose = verbose)
   mods <- lapply(steps, marginal_dist, data = data, dist = dist, alpha = alpha, verbose = verbose)
 
-
-  k <- 1000
   cvs1 <- mods %>%
     lapply(function(x) x[["mod"]]) %>%
     lapply(cvTools::repCV, K = k)
@@ -66,17 +64,19 @@ cdifdif <- function(y , X, dist,
 
 }
 
+
+# library(dplyr)
+# library(purrr)
+# library(broom)
+#
 # data("spilloverDGP")
 # spilloverDGP
-# data <- spilloverDGP %>% select(y = y2, time, treat)
-# step <- 5
-# step <- 52.375
+# data    <- spilloverDGP %>% select(y = y1, time, treat)
+# maxDist <- 30
+# k       <- 5
+# delta   <- 1
+# verbose <- TRUE
 # dist <- spilloverDGP$dist
-
-library(dplyr)
-library(purrr)
-library(broom)
-# library(lmvar)
 
 marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
 
