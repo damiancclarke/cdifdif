@@ -15,5 +15,7 @@ spilloverDGP2 <- spilloverDGP %>%
 ggplot(spilloverDGP2) +
   geom_line(aes(time, y1, group = id, color = trettreat))
 
+str(spilloverDGP)
+attr(spilloverDGP, which = "spec") <- NULL
 
 devtools::use_data(spilloverDGP, overwrite = TRUE)

@@ -1,83 +1,54 @@
 #' Spillover Robust Diff-in-Diff Estimation
 #'
 #' Implements Spillover Robust Diff-in-Diff Estimates (Clarke, 2017)(Clarke, 2017)
-#' @param y a N-by-1 dependent variable.
-#' @param X a N-by-k baseline independent variables
+#' @param formula formula.
+#' @param data data.
 #' @param dist a N-by-1 distance to treatment.
 #' @param maxDist a maximum spillover bandwidth to consider.
 #' @param delta a step-size for bandwidth search (based on dist variable).
-#' @param tlimit a minimum t-stat to consider marginal spillover to be significant.
-#' @param CVtype a type of Cross-Validation (must be either 'kfoldcv' or 'loocv').
+#' @param alpha a minimum t-stat to consider marginal spillover to be significant.
 #' @param k a number of folds for k-fold Cross-Validation.
 #' @param verbose Verbose
 #'
+#' @importFrom stats model.frame quantile
 #' @export
-cdifdif <- function(y , X, dist,
+cdifdif <- function(formula, data, dist,
                     maxDist = 30, #quantile(dist[dist!=0], 0.75),
                     delta   = 1,  #quantile(dist[dist!=0], 0.025),
                     alpha = 0.05,
-                    k = 5,
+                    k = 1000,
                     verbose = TRUE) {
 
-  ff <- log(Volume) ~ log(Height) + log(Girth)
+  data <- model.frame(formula, data)
+  names(data) <- c("y", "t1", "t2")
 
-  mat <- model.matrix(y ~ ., data)
-  mat <- model.matrix(y ~ . -1, data)
-  head(mat)
+  # head(data)
 
   # linspace(delta,maxDist,round(maxDist/delta))
   # http://mathesaurus.sourceforge.net/octave-r.html
   steps <- seq(from = delta, to = maxDist, length = round(maxDist/delta))
 
-  # mods <- purrr::map(steps, marginal_dist, data = data, dist = dist, alpha = alpha, verbose = verbose)
   mods <- lapply(steps, marginal_dist, data = data, dist = dist, alpha = alpha, verbose = verbose)
 
-  cvs1 <- mods %>%
+  cvs <- mods %>%
     lapply(function(x) x[["mod"]]) %>%
-    lapply(cvTools::repCV, K = k)
+    lapply(get_cv_rmse_from_mod_k, k = k, verbose = verbose) %>%
+    unlist()
 
-  cvs2 <- mods %>%
-    lapply(function(x) x[["mod"]]) %>%
-    lapply(get_cv_rmse_from_mod_k, k = k)
+  # plot(cvs)
 
-
-  microbenchmark::microbenchmark(
-    cvs1 <- mods %>%
-      lapply(function(x) x[["mod"]]) %>%
-      lapply(cvTools::repCV, K = k)
-    ,
-    cvs2 <- mods %>%
-      lapply(function(x) x[["mod"]]) %>%
-      lapply(get_cv_rmse_from_mod_k, k = k)
-    , times = 5
+  list(
+    mods = mods,
+    cvs = cvs,
+    steps = steps
   )
-
-
-  cvs1v <- lapply(cvs1, function(x){ x[["cv"]]}) %>%
-    unlist() %>%
-    as.vector()
-  cvs2v <- unlist(cvs2)
-
-  cvs1v
-  cvs2v
 
 
 }
 
-
-# library(dplyr)
-# library(purrr)
-# library(broom)
-#
-# data("spilloverDGP")
-# spilloverDGP
-# data    <- spilloverDGP %>% select(y = y1, time, treat)
-# maxDist <- 30
-# k       <- 5
-# delta   <- 1
-# verbose <- TRUE
-# dist <- spilloverDGP$dist
-
+#' @importFrom stats lm setNames
+#' @importFrom broom tidy
+#' @importFrom magrittr %>%
 marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
 
   dl    <- 0
@@ -94,12 +65,12 @@ marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
     if(verbose) message("iteration: ", t, " step: ", step)
 
     dnew <- as.numeric(dl < dist & dist <= dl + step)
-    daux <- dplyr::bind_cols(daux, purrr::set_names(data_frame(dnew), paste0("d", t)))
+    daux <- cbind(daux, setNames(data.frame(dnew), paste0("d", t)))
 
     mod_old <- mod_aux
     mod_aux <- lm(y ~ ., data = daux)
 
-    modsummary <- broom::tidy(mod_aux) # summary(mod_aux)
+    modsummary <- tidy(mod_aux) # summary(mod_aux)
 
     if(!paste0("d", t) %in% modsummary[["term"]]) break
 
@@ -116,28 +87,33 @@ marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
 
 }
 
-get_cv_rmse_from_mod_k <- function(mod, k) {
+#' @importFrom stats predict
+get_cv_rmse_from_mod_k <- function(mod, k, verbose = verbose) {
 
   d <- mod$model
 
   folds <- createFolds(seq_len(nrow(mod$model)), k = k)
 
-  ss_errs <- lapply(folds, function(f) {
+  s_errs <- lapply(seq_along(folds), function(fold) {
 
-    # print(f)
+    if(verbose) message("fold: ", fold)
 
-    mod <- lm(y ~ ., data = d[-f,])
-    yht <- predict(mod, newdata = d[f, ])
+    idx <- folds[[fold]]
 
-    err <- d[f, "y"] - yht
+    mod <- lm(y ~ ., data = d[-idx,])
+    yht <- predict(mod, newdata = d[idx, ])
 
-    ss_err <-  sum(err^2)
+    err <- d[idx, "y"] - yht
 
-    ss_err
+    s_err <-  err^2
+
+    s_err
 
   })
 
-  rmse <- sqrt( sum(unlist(ss_errs)) / nrow(d) )
+  s_errs <- unlist(s_errs)
+
+  rmse <- sqrt(mean(s_errs))
 
   rmse
 

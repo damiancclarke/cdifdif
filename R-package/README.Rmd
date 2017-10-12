@@ -1,0 +1,57 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "dev/figures/")
+```
+
+# cdifdif
+
+The goal of cdifdif is to ...
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+```{r}
+library(cdifdif)
+
+data("spilloverDGP")
+
+str(spilloverDGP)
+
+mod <- cdifdif(y1 ~ time + treat, data = spilloverDGP, dist = spilloverDGP$dist,
+               maxDist = 30, delta = 1, alpha = 0.05, k = 10, verbose = FALSE)
+```
+
+We can obtain all the CV-RMSE and plot them.
+
+```{r}
+plot(mod$cvs, type = "l", main = "CV RMSEs")
+```
+
+And get the model where we obtain that error:
+
+```{r}
+nmod <- which.min(mod$cvs)
+nmod
+
+mod$cvs[[nmod]]
+```
+
+And then the model:
+
+```{r}
+mod$mods[[nmod]]$summaries[[nmod]]
+```
+
+
+
