@@ -30,15 +30,14 @@ cdifdif <- function(formula, data, dist,
 
   mods <- lapply(steps, marginal_dist, data = data, dist = dist, alpha = alpha, verbose = verbose)
 
-  cvs <- mods %>%
-    lapply(function(x) x[["mod"]]) %>%
-    lapply(get_cv_rmse_from_mod_k, k = k, verbose = verbose) %>%
-    unlist()
+  finalmods <- lapply(mods, function(x) x[["mod"]])
 
+  cvs <- lapply(finalmods, get_cv_rmse_from_mod_k, k = k, verbose = verbose)
+  cvs <- unlist(cvs)
   # plot(cvs)
 
   list(
-    mods = mods,
+    mods = finalmods,
     cvs = cvs,
     steps = steps
   )

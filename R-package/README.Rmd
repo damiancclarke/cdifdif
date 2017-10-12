@@ -2,6 +2,8 @@
 output:
   md_document:
     variant: markdown_github
+editor_options: 
+  chunk_output_type: console
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -11,6 +13,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "dev/figures/")
+ggplot2::theme_set(ggplot2::theme_minimal())
 ```
 
 # cdifdif
@@ -50,8 +53,56 @@ mod$cvs[[nmod]]
 And then the model:
 
 ```{r}
-mod$mods[[nmod]]$summaries[[nmod]]
+library(broom) # tidy function
+
+tidy(mod$mods[[nmod]]) 
 ```
 
+5 intervals we have. We can visualize:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(viridis)
+
+step <- mod$steps[[nmod]]
+step
+
+cuts <- c(seq(0, 5), Inf) * step
+cuts
+
+spilloverDGP21 <- spilloverDGP %>% 
+  filter(treat == 1) %>% 
+  distinct(id) %>% 
+  mutate(treated = "yes")
+
+spilloverDGP22 <- spilloverDGP %>% 
+  filter(treat == 0, time == 1) %>% 
+  select(id, dist) %>% 
+  mutate(distance = cut(dist, cuts, include.lowest = FALSE)) %>% 
+  select(id, distance)
+
+spilloverDGP <- spilloverDGP %>% 
+  left_join(spilloverDGP21) %>% 
+  left_join(spilloverDGP22) %>% 
+  mutate(treated = ifelse(is.na(treated), "no", "yes"))
+spilloverDGP  
+
+
+ggplot(spilloverDGP, aes(x = time, y = y1)) +
+  geom_line(aes(group = id, color = treated), alpha = 0.15) +
+  geom_smooth(aes(color = treated), se = FALSE, lwd = 2, method = "lm") +
+  scale_color_viridis(discrete = TRUE, end = 0.9)
+
+
+spilloverDGP %>% 
+  filter(treated == "no") %>%
+  ggplot(aes(x = time, y = y1)) +
+  geom_line(aes(group = id, color = distance), alpha = 0.15) +
+  geom_smooth(aes(color = distance), se = FALSE, lwd = 2, method = "lm") +
+  scale_color_viridis(discrete = TRUE) +
+  labs(title = "Effect on NO treated cases by distance")
+```
 
 
