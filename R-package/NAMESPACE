@@ -3,6 +3,8 @@
 export(cdifdif)
 importFrom(broom,tidy)
 importFrom(magrittr,"%>%")
+importFrom(stats,gaussian)
+importFrom(stats,glm)
 importFrom(stats,lm)
 importFrom(stats,model.frame)
 importFrom(stats,predict)

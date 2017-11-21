@@ -5,7 +5,7 @@
 \title{Spillover Robust Diff-in-Diff Estimation}
 \usage{
 cdifdif(formula, data, dist, maxDist = 30, delta = 1, alpha = 0.05,
-  k = 1000, verbose = TRUE)
+  weights = NULL, family = gaussian, k = 1000, verbose = TRUE)
 }
 \arguments{
 \item{formula}{formula.}
@@ -20,10 +20,23 @@ cdifdif(formula, data, dist, maxDist = 30, delta = 1, alpha = 0.05,
 
 \item{alpha}{a minimum t-stat to consider marginal spillover to be significant.}
 
+\item{weights}{(only for weighted fits) the specified weights.}
+
+\item{family}{a description of the error distribution and link function to be used in the model.}
+
 \item{k}{a number of folds for k-fold Cross-Validation.}
 
 \item{verbose}{Verbose}
 }
 \description{
 Implements Spillover Robust Diff-in-Diff Estimates (Clarke, 2017)(Clarke, 2017)
+}
+\examples{
+
+data("spilloverDGP")
+mod <- cdifdif(y1 ~ time + treat, data = spilloverDGP, dist = spilloverDGP$dist,
+               maxDist = 30, delta = 1, alpha = 0.05, k = 10, verbose = FALSE)
+mod
+
+
 }

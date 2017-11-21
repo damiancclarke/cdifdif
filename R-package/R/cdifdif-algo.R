@@ -7,17 +7,27 @@
 #' @param maxDist a maximum spillover bandwidth to consider.
 #' @param delta a step-size for bandwidth search (based on dist variable).
 #' @param alpha a minimum t-stat to consider marginal spillover to be significant.
-#' @weights (only for weighted fits) the specified weights.
+#' @param weights (only for weighted fits) the specified weights.
+#' @param family a description of the error distribution and link function to be used in the model.
 #' @param k a number of folds for k-fold Cross-Validation.
 #' @param verbose Verbose
 #'
-#' @importFrom stats model.frame quantile
+#' @examples
+#'
+#' data("spilloverDGP")
+#' mod <- cdifdif(y1 ~ time + treat, data = spilloverDGP, dist = spilloverDGP$dist,
+#'                maxDist = 30, delta = 1, alpha = 0.05, k = 10, verbose = FALSE)
+#' mod
+#'
+#'
+#' @importFrom stats model.frame quantile gaussian
 #' @export
 cdifdif <- function(formula, data, dist,
                     maxDist = 30, #quantile(dist[dist!=0], 0.75),
                     delta   = 1,  #quantile(dist[dist!=0], 0.025),
                     alpha = 0.05,
                     weights = NULL,
+                    family = gaussian,
                     k = 1000,
                     verbose = TRUE) {
 
@@ -31,7 +41,7 @@ cdifdif <- function(formula, data, dist,
   steps <- seq(from = delta, to = maxDist, length = round(maxDist/delta))
 
   mods <- lapply(steps, marginal_dist, data = data, dist = dist, alpha = alpha,
-                 verbose = verbose, weights = weights)
+                 verbose = verbose, weights = weights, family = family)
 
   finalmods <- lapply(mods, function(x) x[["mod"]])
 
@@ -47,10 +57,11 @@ cdifdif <- function(formula, data, dist,
 
 }
 
-#' @importFrom stats lm setNames
+#' @importFrom stats lm setNames glm
 #' @importFrom broom tidy
 #' @importFrom magrittr %>%
-marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE, weights = NULL) {
+marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE,
+                          weights = NULL, family = gaussian) {
 
   dl    <- 0
   t     <- 1
@@ -69,7 +80,9 @@ marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE, weight
     daux <- cbind(daux, setNames(data.frame(dnew), paste0("d", t)))
 
     mod_old <- mod_aux
-    mod_aux <- lm(y ~ ., data = daux, weights = weights)
+
+    # https://stats.stackexchange.com/a/181180/59417
+    mod_aux <- glm(y ~ ., data = daux, weights = weights, family = family)
 
     modsummary <- tidy(mod_aux) # summary(mod_aux)
 
