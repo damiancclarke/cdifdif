@@ -45,7 +45,7 @@ nmod
 #> [1] 5
 
 mod$cvs[[nmod]]
-#> [1] 1.028417
+#> [1] 1.026979
 ```
 
 And then the model:
@@ -145,3 +145,13 @@ spilloverDGP %>%
 ```
 
 ![](dev/figures/unnamed-chunk-6-2.png)
+
+``` r
+# weights
+set.seed(123)
+ws <- runif(nrow(spilloverDGP))
+
+mod <- cdifdif(y1 ~ time + treat, data = spilloverDGP, dist = spilloverDGP$dist,
+               maxDist = 30, delta = 1, alpha = 0.05, k = 10, verbose = FALSE,
+               weights = ws)
+```

@@ -7,6 +7,7 @@
 #' @param maxDist a maximum spillover bandwidth to consider.
 #' @param delta a step-size for bandwidth search (based on dist variable).
 #' @param alpha a minimum t-stat to consider marginal spillover to be significant.
+#' @weights (only for weighted fits) the specified weights.
 #' @param k a number of folds for k-fold Cross-Validation.
 #' @param verbose Verbose
 #'
@@ -16,6 +17,7 @@ cdifdif <- function(formula, data, dist,
                     maxDist = 30, #quantile(dist[dist!=0], 0.75),
                     delta   = 1,  #quantile(dist[dist!=0], 0.025),
                     alpha = 0.05,
+                    weights = NULL,
                     k = 1000,
                     verbose = TRUE) {
 
@@ -28,7 +30,8 @@ cdifdif <- function(formula, data, dist,
   # http://mathesaurus.sourceforge.net/octave-r.html
   steps <- seq(from = delta, to = maxDist, length = round(maxDist/delta))
 
-  mods <- lapply(steps, marginal_dist, data = data, dist = dist, alpha = alpha, verbose = verbose)
+  mods <- lapply(steps, marginal_dist, data = data, dist = dist, alpha = alpha,
+                 verbose = verbose, weights = weights)
 
   finalmods <- lapply(mods, function(x) x[["mod"]])
 
@@ -42,13 +45,12 @@ cdifdif <- function(formula, data, dist,
     steps = steps
   )
 
-
 }
 
 #' @importFrom stats lm setNames
 #' @importFrom broom tidy
 #' @importFrom magrittr %>%
-marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
+marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE, weights = NULL) {
 
   dl    <- 0
   t     <- 1
@@ -67,7 +69,7 @@ marginal_dist <- function(data, dist, step, alpha = 0.05, verbose = TRUE) {
     daux <- cbind(daux, setNames(data.frame(dnew), paste0("d", t)))
 
     mod_old <- mod_aux
-    mod_aux <- lm(y ~ ., data = daux)
+    mod_aux <- lm(y ~ ., data = daux, weights = weights)
 
     modsummary <- tidy(mod_aux) # summary(mod_aux)
 
